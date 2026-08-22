@@ -1,0 +1,23 @@
+# Optional: a local Postgres instance for running the backend against Postgres
+# instead of the default zero-config SQLite database.
+#
+# Usage:
+#   docker compose up -d
+#   Then in backend/prisma/schema.prisma set datasource provider to "postgresql"
+#   and set backend/.env DATABASE_URL to the connection string below.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clinic
+      POSTGRES_PASSWORD: clinic
+      POSTGRES_DB: clinic
+    ports:
+      - "5432:5432"
+    volumes:
+      - clinic_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  clinic_postgres_data:
