@@ -1,0 +1,143 @@
+// Clinic Business Software - Database Schema
+// Default datasource is SQLite for zero-config local development.
+// For production, set provider = "postgresql" and DATABASE_URL to a Postgres connection string
+// (a ready-to-use Postgres service is provided in docker-compose.yml at the repo root).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Note: SQLite has no native enum type, so the fields below that represent an
+// enumerated value are plain strings. Valid values are defined once in
+// src/types/enums.ts and enforced at the API layer via zod. If you switch the
+// datasource to postgresql, feel free to convert these back to real Prisma enums.
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("RECEPTIONIST") // ADMIN | DOCTOR | RECEPTIONIST
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  doctor Doctor?
+}
+
+model Doctor {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialty   String
+  phone       String?
+  bio         String?
+  consultFee  Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+}
+
+model Patient {
+  id               String   @id @default(uuid())
+  firstName        String
+  lastName         String
+  dob              DateTime?
+  gender           String? // MALE | FEMALE | OTHER
+  phone            String?
+  email            String?
+  address          String?
+  bloodGroup       String?
+  allergies        String?
+  emergencyContact String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  invoices       Invoice[]
+}
+
+model Appointment {
+  id        String            @id @default(uuid())
+  patientId String
+  patient   Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId  String
+  doctor    Doctor            @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  date      DateTime
+  startTime String
+  endTime   String
+  status    String            @default("SCHEDULED") // SCHEDULED | COMPLETED | CANCELLED | NO_SHOW
+  reason    String?
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  medicalRecord MedicalRecord?
+  invoice       Invoice?
+}
+
+model MedicalRecord {
+  id            String       @id @default(uuid())
+  patientId     String
+  patient       Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId      String
+  doctor        Doctor       @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointmentId String?      @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  visitDate     DateTime     @default(now())
+  diagnosis     String
+  prescription  String?
+  notes         String?
+  vitals        String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId String?       @unique
+  appointment   Appointment?  @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  status        String        @default("UNPAID") // UNPAID | PARTIAL | PAID | CANCELLED
+  issueDate     DateTime      @default(now())
+  dueDate       DateTime?
+  totalAmount   Float         @default(0)
+  paidAmount    Float         @default(0)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items    InvoiceItem[]
+  payments Payment[]
+}
+
+model InvoiceItem {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int     @default(1)
+  unitPrice   Float
+  amount      Float
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount    Float
+  method    String   @default("cash")
+  paidAt    DateTime @default(now())
+  notes     String?
+}

@@ -1,0 +1,19 @@
+{
+  "name": "clinic-business-software",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Full-stack clinic business management software (patients, appointments, doctors, billing).",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "setup": "npm run install:all && npm run db:setup",
+    "db:setup": "npm run prisma:generate --workspace backend && npm run prisma:migrate --workspace backend && npm run seed --workspace backend",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend"
+  }
+}
